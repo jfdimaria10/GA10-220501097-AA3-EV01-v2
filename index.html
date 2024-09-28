@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Parqueo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .container {
+            width: 500px;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            text-align: center;
+        }
+        h1 {
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        .form-group input, .form-group select, .form-group button {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center; /* Centra el texto dentro del campo de entrada */
+        }
+        .form-group button {
+            background-color: #28a745;
+            color: white;
+            cursor: pointer;
+        }
+        .form-group button:hover {
+            background-color: #218838;
+        }
+        .radio-group {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 10px;
+        }
+        #vehiculos-list {
+            margin-top: 20px;
+            padding: 0;
+            list-style-type: none;
+            height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+        }
+        #vehiculos-list li {
+            background-color: #f8f9fa;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #vehiculos-list li:hover {
+            background-color: #e9ecef;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Sistema de Parqueo</h1>
+
+    <div class="form-group">
+        <label for="placa">Placa del vehículo:</label>
+        <input type="text" id="placa" placeholder="Ingrese la placa" maxlength="6" oninput="validarPlaca()">
+    </div>
+
+    <div class="form-group">
+        <label>Tipo de vehículo:</label>
+        <div class="radio-group">
+            <label>
+                <input type="radio" name="tipo" value="moto" checked> Moto
+            </label>
+            <label>
+                <input type="radio" name="tipo" value="carro"> Carro
+            </label>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <button onclick="ingresarVehiculo()">Ingresar vehículo</button>
+    </div>
+    
+    <div class="form-group">
+        <button onclick="retirarVehiculo()">Retirar vehículo</button>
+    </div>
+
+    <h2>Vehículos registrados:</h2>
+    <ul id="vehiculos-list" onclick="seleccionarPlaca(event)"></ul>
+</div>
+
+<script>
+    const TARIFAS = {
+        'moto': { 'hora': 1500, 'dia': 8000, 'mes': 85000 },
+        'carro': { 'hora': 4000, 'dia': 12000, 'mes': 110000 }
+    };
+
+    const vehiculos = {};
+
+    function validarPlaca() {
+        const placaInput = document.getElementById('placa');
+        const placa = placaInput.value;
+
+        // Verificar que solo sean letras y números
+        const placaValida = /^[a-zA-Z0-9]*$/.test(placa);
+
+        // Si la placa es mayor de 6 caracteres o tiene caracteres no permitidos
+        if (!placaValida || placa.length > 6) {
+            alert("Formato de placa no válido, recuerde que son de 6 caracteres, por favor reintentar, gracias");
+            placaInput.value = '';  // Limpiar el campo de texto
+        }
+    }
+
+    function ingresarVehiculo() {
+        const placa = document.getElementById('placa').value.toUpperCase();
+        const tipo = document.querySelector('input[name="tipo"]:checked').value;
+
+        if (placa in vehiculos) {
+            alert("El vehículo ya está registrado.");
+        } else if (placa.length === 6) {  // Verificar que la placa sea exactamente de 6 caracteres
+            const horaEntrada = new Date();
+            vehiculos[placa] = { tipo, horaEntrada };
+            actualizarListaVehiculos();
+            alert(`Vehículo con placa ${placa} ingresado.`);
+            document.getElementById('placa').value = '';
+        } else {
+            alert("Formato de placa no válido. Deben ser exactamente 6 caracteres.");
+        }
+    }
+
+    function retirarVehiculo() {
+        const placa = document.getElementById('placa').value.toUpperCase();
+
+        if (!(placa in vehiculos)) {
+            alert("El vehículo no está registrado.");
+        } else {
+            const vehiculo = vehiculos[placa];
+            const horaEntrada = vehiculo.horaEntrada;
+            const horaSalida = new Date();
+            const tiempoEstancia = (horaSalida - new Date(horaEntrada)) / 1000; // Convert to seconds
+            const costo = calcularCosto(vehiculo.tipo, tiempoEstancia);
+            delete vehiculos[placa];
+            actualizarListaVehiculos();
+            alert(`Vehículo con placa ${placa} retirado.\nCosto: ${costo.toLocaleString()} COP`);
+            document.getElementById('placa').value = '';
+        }
+    }
+
+    function calcularCosto(tipo, tiempoEstancia) {
+        const horas = tiempoEstancia / 3600;
+        const dias = horas / 24;
+
+        if (dias >= 30) {
+            return TARIFAS[tipo]['mes'];
+        } else if (dias >= 1) {
+            return TARIFAS[tipo]['dia'] * Math.floor(dias);
+        } else {
+            return TARIFAS[tipo]['hora'] * Math.ceil(horas); // Se cobra al menos una hora
+        }
+    }
+
+    function actualizarListaVehiculos() {
+        const lista = document.getElementById('vehiculos-list');
+        lista.innerHTML = '';
+        for (const placa in vehiculos) {
+            const vehiculo = vehiculos[placa];
+            const tiempoEstancia = (new Date() - new Date(vehiculo.horaEntrada)) / 1000;
+            const horas = Math.floor(tiempoEstancia / 3600);
+            const minutos = Math.floor((tiempoEstancia % 3600) / 60);
+            const tiempoFormat = `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
+
+            const listItem = document.createElement('li');
+            listItem.textContent = `Placa: ${placa} | Tipo: ${vehiculo.tipo} | Tiempo: ${tiempoFormat}`;
+            lista.appendChild(listItem);
+        }
+    }
+
+    function seleccionarPlaca(event) {
+        const target = event.target;
+        if (target.tagName === 'LI') {
+            const placaInfo = target.textContent.split(" | ")[0].replace("Placa: ", "");
+            document.getElementById('placa').value = placaInfo;
+        }
+    }
+</script>
+
+</body>
+</html>
